@@ -19,7 +19,7 @@ const modelSchema = z.union([
 
 export const CopilotStatusSchema = z.looseObject({
     session_id: z.string().optional(),
-    session_name: z.string().optional(),
+    session_name: z.string().nullable().optional(),
     transcript_path: z.string().optional(),
     cwd: z.string().optional(),
     version: z.string().optional(),
@@ -114,7 +114,7 @@ export function normalizeCopilotStatus(status: CopilotStatus): NormalizedCopilot
 
     return {
         sessionId: status.session_id,
-        sessionName: status.session_name,
+        sessionName: status.session_name ?? undefined,
         transcriptPath: status.transcript_path,
         cwd: status.cwd ?? status.workspace?.current_dir ?? status.workspace?.project_dir,
         version: status.version,

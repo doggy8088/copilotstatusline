@@ -57,6 +57,21 @@ describe('CopilotStatusSchema', () => {
         expect(status.cost.premiumRequests).toBe(0);
     });
 
+    it('accepts a null session name from Copilot CLI', () => {
+        const status = normalizeCopilotStatus(CopilotStatusSchema.parse({
+            session_id: 'session-2',
+            session_name: null,
+            model: {
+                id: 'gpt-5.4',
+                display_name: 'GPT-5.4'
+            }
+        }));
+
+        expect(status.sessionId).toBe('session-2');
+        expect(status.sessionName).toBeUndefined();
+        expect(status.modelName).toBe('GPT-5.4');
+    });
+
     it('rejects invalid numeric fields instead of guessing', () => {
         expect(() => CopilotStatusSchema.parse({ context_window: { total_input_tokens: 'not-a-number' } })).toThrow();
     });
