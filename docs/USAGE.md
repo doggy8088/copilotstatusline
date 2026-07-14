@@ -11,14 +11,14 @@ Unknown payload fields are accepted for forward compatibility. Missing optional 
 Interactive installation:
 
 ```sh
-npx -y copilotstatusline@latest
+npx -y @willh/copilotstatusline@latest
 ```
 
 Non-interactive installation:
 
 ```sh
-npx -y copilotstatusline@latest --install npm
-bunx -y copilotstatusline@latest --install bunx
+npx -y @willh/copilotstatusline@latest --install npm
+bunx -y @willh/copilotstatusline@latest --install bunx
 copilotstatusline --install global
 ```
 

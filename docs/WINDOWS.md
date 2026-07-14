@@ -29,7 +29,7 @@ Formatter settings:
 PowerShell:
 
 ```powershell
-npx -y copilotstatusline@latest --install npm
+npx -y @willh/copilotstatusline@latest --install npm
 ```
 
 If a global package is installed:

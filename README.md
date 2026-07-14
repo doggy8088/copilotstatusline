@@ -17,13 +17,13 @@ The implementation targets the user-level Copilot settings file at `$COPILOT_HOM
 Launch the configuration UI:
 
 ```sh
-npx -y copilotstatusline@latest
+npx -y @willh/copilotstatusline@latest
 ```
 
 Choose `Install or repair Copilot integration`, or install non-interactively:
 
 ```sh
-npx -y copilotstatusline@latest --install npm
+npx -y @willh/copilotstatusline@latest --install npm
 ```
 
 The installer merges the following keys into the existing Copilot settings and preserves unrelated settings:
@@ -32,7 +32,7 @@ The installer merges the following keys into the existing Copilot settings and p
 {
   "statusLine": {
     "type": "command",
-    "command": "npx -y copilotstatusline@latest",
+    "command": "npx -y @willh/copilotstatusline@latest",
     "padding": 0
   },
   "footer": {

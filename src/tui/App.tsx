@@ -56,8 +56,8 @@ const MENU_ITEMS = [
 ];
 
 const INSTALL_ITEMS: { label: string; value: InstallCommandMode | 'back' }[] = [
-    { label: 'npx -y copilotstatusline@latest', value: 'npm' },
-    { label: 'bunx -y copilotstatusline@latest', value: 'bunx' },
+    { label: 'npx -y @willh/copilotstatusline@latest', value: 'npm' },
+    { label: 'bunx -y @willh/copilotstatusline@latest', value: 'bunx' },
     { label: 'Global copilotstatusline binary', value: 'global' },
     { label: 'Back', value: 'back' }
 ];

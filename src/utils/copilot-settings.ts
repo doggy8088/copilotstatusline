@@ -4,8 +4,8 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 
 export const STATUS_LINE_COMMANDS = {
-    npm: 'npx -y copilotstatusline@latest',
-    bunx: 'bunx -y copilotstatusline@latest',
+    npm: 'npx -y @willh/copilotstatusline@latest',
+    bunx: 'bunx -y @willh/copilotstatusline@latest',
     global: 'copilotstatusline'
 } as const;
 
