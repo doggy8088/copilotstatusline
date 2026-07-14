@@ -68,29 +68,29 @@ export interface NormalizedCopilotStatus {
     reasoningEffort?: string;
     allowAll?: boolean;
     context: {
-        inputTokens: number;
-        outputTokens: number;
-        cacheReadTokens: number;
-        cacheWriteTokens: number;
-        reasoningTokens: number;
-        totalTokens: number;
-        lastCallInputTokens: number;
-        lastCallOutputTokens: number;
-        currentTokens: number;
-        limitTokens: number;
+        inputTokens?: number;
+        outputTokens?: number;
+        cacheReadTokens?: number;
+        cacheWriteTokens?: number;
+        reasoningTokens?: number;
+        totalTokens?: number;
+        lastCallInputTokens?: number;
+        lastCallOutputTokens?: number;
+        currentTokens?: number;
+        limitTokens?: number;
         usedPercentage?: number;
     };
     cost: {
-        apiDurationMs: number;
-        durationMs: number;
-        premiumRequests: number;
-        linesAdded: number;
-        linesRemoved: number;
+        apiDurationMs?: number;
+        durationMs?: number;
+        premiumRequests?: number;
+        linesAdded?: number;
+        linesRemoved?: number;
     };
 }
 
-function finiteNumber(value: number | null | undefined): number {
-    return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+function finiteNumber(value: number | null | undefined): number | undefined {
+    return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
 
 export function normalizeCopilotStatus(status: CopilotStatus): NormalizedCopilotStatus {
@@ -108,9 +108,17 @@ export function normalizeCopilotStatus(status: CopilotStatus): NormalizedCopilot
     const cacheWriteTokens = finiteNumber(context?.total_cache_write_tokens);
     const reasoningTokens = finiteNumber(context?.total_reasoning_tokens);
     const reportedTotal = finiteNumber(context?.total_tokens);
-    const totalTokens = reportedTotal > 0
-        ? reportedTotal
-        : inputTokens + outputTokens + cacheReadTokens + cacheWriteTokens + reasoningTokens;
+    const componentTokens = [
+        inputTokens,
+        outputTokens,
+        cacheReadTokens,
+        cacheWriteTokens,
+        reasoningTokens
+    ];
+    const derivedTotal = componentTokens.some(value => value !== undefined)
+        ? componentTokens.reduce<number>((sum, value) => sum + (value ?? 0), 0)
+        : undefined;
+    const totalTokens = reportedTotal ?? derivedTotal;
 
     return {
         sessionId: status.session_id,

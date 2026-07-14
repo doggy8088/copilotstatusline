@@ -312,10 +312,15 @@ describe('recordTokenUsage', () => {
         });
     });
 
-    it('skips missing sessions, disabled recording, and invalid counters', async () => {
+    it('skips missing sessions, incomplete counters, disabled recording, and invalid counters', async () => {
         const missingSession = createStatus();
         delete missingSession.sessionId;
         expect((await recordTokenUsage(missingSession, { copilotHome: temporaryHome })).recorded)
+            .toBe(false);
+
+        const incompleteCounters = createStatus();
+        delete incompleteCounters.context.cacheWriteTokens;
+        expect((await recordTokenUsage(incompleteCounters, { copilotHome: temporaryHome })).recorded)
             .toBe(false);
 
         process.env[USAGE_RECORDING_DISABLE_ENV] = '1';

@@ -143,6 +143,21 @@ The normalized widgets currently use:
 - cost: API duration, total duration, premium requests, and added/removed lines;
 - permission state: `allow_all`.
 
+Widget availability is divided by source:
+
+| Source | Widgets | Availability |
+| --- | --- | --- |
+| Copilot payload | Model, Model ID, Copilot Version, Session ID, Current Directory | Shown when Copilot supplies the corresponding field or supported alias. |
+| Optional Copilot payload | Reasoning, Session Name | Hidden when the active model has no reasoning effort or the session has no name. |
+| Copilot token payload | Input Tokens, Output Tokens, Cache Read, Cache Write, Reasoning Tokens, Total Tokens, Last Call Input, Last Call Output | Zero is shown as a real value; a missing field is hidden instead of being converted to zero. |
+| Copilot context payload | Current Context, Context Limit, Context Used, Context Remaining | Used percentage comes from the payload, or is derived when both the current value and limit are available. |
+| Copilot cost payload | Premium Requests, API Duration, Session Duration, Lines Added, Lines Removed | Shown when the corresponding cumulative counter is available. |
+| Copilot permission payload | Allow All | `Allow All: ON` and `Allow All: OFF` are rendered distinctly; a missing field is hidden. |
+| Repository probes | Git Branch, Git Changes, Jujutsu Change | Requires the matching executable and repository. Failed or timed-out probes are hidden. |
+| Local runtime | Terminal Width, Free Memory | Read from the current terminal and operating system. |
+| User configuration | Custom Text, Custom Command | Requires configured text or a command that produces output. |
+| Layout | Separator, Flex | Always available as formatting controls and does not represent Copilot payload data. |
+
 ## Diagnostics
 
 Inspect integration status:

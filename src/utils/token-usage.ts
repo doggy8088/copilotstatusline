@@ -68,6 +68,15 @@ interface LoadedState {
     warning?: string;
 }
 
+interface TokenCounters {
+    inputTokens: number;
+    outputTokens: number;
+    cacheReadTokens: number;
+    cacheWriteTokens: number;
+    reasoningTokens: number;
+    totalTokens: number;
+}
+
 function emptyState(): UsageState {
     return {
         version: STATE_VERSION,
@@ -241,23 +250,48 @@ async function loadState(
     }
 }
 
-function assertTokenCounters(status: NormalizedCopilotStatus): void {
-    const counters = [
+function tokenCounters(status: NormalizedCopilotStatus): TokenCounters | undefined {
+    const cumulative = [
         status.context.inputTokens,
         status.context.outputTokens,
         status.context.cacheReadTokens,
         status.context.cacheWriteTokens,
         status.context.reasoningTokens,
-        status.context.totalTokens,
+        status.context.totalTokens
+    ];
+    const optional = [
         status.context.lastCallInputTokens,
         status.context.lastCallOutputTokens,
         status.context.currentTokens,
         status.context.limitTokens
     ];
+    const present = [...cumulative, ...optional].filter(value => value !== undefined);
 
-    if (!counters.every(value => Number.isSafeInteger(value) && value >= 0)) {
+    if (!present.every(value => Number.isSafeInteger(value) && value >= 0)) {
         throw new Error('token counters must be non-negative safe integers');
     }
+
+    if (cumulative.some(value => value === undefined)) {
+        return undefined;
+    }
+
+    const [
+        inputTokens,
+        outputTokens,
+        cacheReadTokens,
+        cacheWriteTokens,
+        reasoningTokens,
+        totalTokens
+    ] = cumulative as number[];
+
+    return {
+        inputTokens: inputTokens ?? 0,
+        outputTokens: outputTokens ?? 0,
+        cacheReadTokens: cacheReadTokens ?? 0,
+        cacheWriteTokens: cacheWriteTokens ?? 0,
+        reasoningTokens: reasoningTokens ?? 0,
+        totalTokens: totalTokens ?? 0
+    };
 }
 
 function delta(current: number, previous: number | undefined): number {
@@ -295,7 +329,11 @@ export async function recordTokenUsage(
         return { recorded: false };
     }
 
-    assertTokenCounters(status);
+    const counters = tokenCounters(status);
+
+    if (counters === undefined) {
+        return { recorded: false };
+    }
 
     const now = options.now ?? new Date();
     const timestamp = localIsoTimestamp(now);
@@ -323,12 +361,12 @@ export async function recordTokenUsage(
         const previous = state.sessions[sessionKey] ?? state.sessions[sessionId];
         const model = status.modelName ?? status.modelId ?? 'unknown';
         const modelId = status.modelId ?? 'unknown';
-        const deltaInput = delta(status.context.inputTokens, previous?.inputTokens);
-        const deltaOutput = delta(status.context.outputTokens, previous?.outputTokens);
-        const deltaCacheRead = delta(status.context.cacheReadTokens, previous?.cacheReadTokens);
-        const deltaCacheWrite = delta(status.context.cacheWriteTokens, previous?.cacheWriteTokens);
-        const deltaReasoning = delta(status.context.reasoningTokens, previous?.reasoningTokens);
-        const deltaTotal = delta(status.context.totalTokens, previous?.totalTokens);
+        const deltaInput = delta(counters.inputTokens, previous?.inputTokens);
+        const deltaOutput = delta(counters.outputTokens, previous?.outputTokens);
+        const deltaCacheRead = delta(counters.cacheReadTokens, previous?.cacheReadTokens);
+        const deltaCacheWrite = delta(counters.cacheWriteTokens, previous?.cacheWriteTokens);
+        const deltaReasoning = delta(counters.reasoningTokens, previous?.reasoningTokens);
+        const deltaTotal = delta(counters.totalTokens, previous?.totalTokens);
         const previousModel = previous?.model ?? '';
         const modelChanged = previousModel !== '' && previousModel !== model;
         const turnNo = (previous?.turnNo ?? 0) + (deltaTotal > 0 ? 1 : 0);
@@ -347,12 +385,12 @@ export async function recordTokenUsage(
                 previous_model: previousModel,
                 model_changed: modelChanged,
                 tokens: {
-                    input: status.context.inputTokens,
-                    output: status.context.outputTokens,
-                    cache_read: status.context.cacheReadTokens,
-                    cache_write: status.context.cacheWriteTokens,
-                    reasoning: status.context.reasoningTokens,
-                    total: status.context.totalTokens,
+                    input: counters.inputTokens,
+                    output: counters.outputTokens,
+                    cache_read: counters.cacheReadTokens,
+                    cache_write: counters.cacheWriteTokens,
+                    reasoning: counters.reasoningTokens,
+                    total: counters.totalTokens,
                     last_call_input: status.context.lastCallInputTokens,
                     last_call_output: status.context.lastCallOutputTokens
                 },
@@ -391,12 +429,12 @@ export async function recordTokenUsage(
             turnNo,
             model,
             modelId,
-            inputTokens: status.context.inputTokens,
-            outputTokens: status.context.outputTokens,
-            cacheReadTokens: status.context.cacheReadTokens,
-            cacheWriteTokens: status.context.cacheWriteTokens,
-            reasoningTokens: status.context.reasoningTokens,
-            totalTokens: status.context.totalTokens,
+            inputTokens: counters.inputTokens,
+            outputTokens: counters.outputTokens,
+            cacheReadTokens: counters.cacheReadTokens,
+            cacheWriteTokens: counters.cacheWriteTokens,
+            reasoningTokens: counters.reasoningTokens,
+            totalTokens: counters.totalTokens,
             updatedAt: timestamp,
             updatedAtEpochMs: now.getTime()
         };

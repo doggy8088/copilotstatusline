@@ -48,13 +48,26 @@ describe('CopilotStatusSchema', () => {
         expect(status.cost.durationMs).toBe(2500);
     });
 
-    it('accepts a minimal payload and supplies zero-valued counters', () => {
+    it('accepts a minimal payload without inventing missing counters', () => {
         const status = normalizeCopilotStatus(CopilotStatusSchema.parse({ model: 'gpt-5-mini' }));
 
         expect(status.modelId).toBe('gpt-5-mini');
         expect(status.modelName).toBe('gpt-5-mini');
-        expect(status.context.totalTokens).toBe(0);
-        expect(status.cost.premiumRequests).toBe(0);
+        expect(status.context.totalTokens).toBeUndefined();
+        expect(status.cost.premiumRequests).toBeUndefined();
+    });
+
+    it('preserves reported zero values and derives a total from available components', () => {
+        const reportedZero = normalizeCopilotStatus(CopilotStatusSchema.parse({ context_window: { total_tokens: 0 } }));
+        const derivedTotal = normalizeCopilotStatus(CopilotStatusSchema.parse({
+            context_window: {
+                total_input_tokens: 12,
+                total_output_tokens: 3
+            }
+        }));
+
+        expect(reportedZero.context.totalTokens).toBe(0);
+        expect(derivedTotal.context.totalTokens).toBe(15);
     });
 
     it('accepts a null session name from Copilot CLI', () => {

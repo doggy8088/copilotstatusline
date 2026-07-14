@@ -54,7 +54,7 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
     { type: 'session-duration', name: 'Session Duration', description: '累計 session 時間', defaultColor: 'brightBlack' },
     { type: 'lines-added', name: 'Lines Added', description: '本 session 新增行數', defaultColor: 'green' },
     { type: 'lines-removed', name: 'Lines Removed', description: '本 session 刪除行數', defaultColor: 'red' },
-    { type: 'allow-all', name: 'Allow All', description: 'Allow-all／YOLO 狀態', defaultColor: 'brightRed' },
+    { type: 'allow-all', name: 'Allow All', description: '是否啟用所有工具與路徑權限', defaultColor: 'brightRed' },
     { type: 'git-branch', name: 'Git Branch', description: '目前 Git branch', defaultColor: 'magenta' },
     { type: 'git-changes', name: 'Git Changes', description: 'Git staged／unstaged／untracked 數量', defaultColor: 'yellow' },
     { type: 'jj-change', name: 'Jujutsu Change', description: '目前 jj change ID', defaultColor: 'magenta' },
@@ -107,9 +107,13 @@ function renderValue(config: WidgetConfig, label: string, value: string): string
 function numericValue(
     config: WidgetConfig,
     label: string,
-    value: number,
+    value: number | undefined,
     formatter: (input: number) => string = formatTokens
 ): string | null {
+    if (value === undefined) {
+        return null;
+    }
+
     if (config.hideWhenZero && value === 0) {
         return null;
     }
@@ -122,7 +126,11 @@ function contextUsed(status: NormalizedCopilotStatus): number | null {
         return status.context.usedPercentage;
     }
 
-    if (status.context.limitTokens <= 0) {
+    if (
+        status.context.currentTokens === undefined
+        || status.context.limitTokens === undefined
+        || status.context.limitTokens <= 0
+    ) {
         return null;
     }
 
@@ -162,7 +170,7 @@ function gitChanges(cwd: string | undefined, ttl: number): string | null {
 
 export function renderWidget(config: WidgetConfig, context: WidgetRenderContext): string | null {
     const status = context.status;
-    const tokenValues: Partial<Record<WidgetType, [string, number]>> = {
+    const tokenValues: Partial<Record<WidgetType, [string, number | undefined]>> = {
         'input-tokens': ['In', status.context.inputTokens],
         'output-tokens': ['Out', status.context.outputTokens],
         'cache-read-tokens': ['Cache read', status.context.cacheReadTokens],
@@ -184,7 +192,7 @@ export function renderWidget(config: WidgetConfig, context: WidgetRenderContext)
         case 'model':
             return status.modelName === undefined ? null : renderValue(config, 'Model', status.modelName);
         case 'model-id':
-            return status.modelId === undefined ? null : renderValue(config, 'Model', status.modelId);
+            return status.modelId === undefined ? null : renderValue(config, 'Model ID', status.modelId);
         case 'reasoning':
             return status.reasoningEffort === undefined
                 ? null
@@ -194,7 +202,9 @@ export function renderWidget(config: WidgetConfig, context: WidgetRenderContext)
         case 'session-id':
             return status.sessionId === undefined ? null : renderValue(config, 'Session', status.sessionId);
         case 'session-name':
-            return status.sessionName === undefined ? null : renderValue(config, 'Session', status.sessionName);
+            return status.sessionName === undefined
+                ? null
+                : renderValue(config, 'Session Name', status.sessionName);
         case 'cwd':
             return status.cwd === undefined ? null : renderValue(config, '', status.cwd);
         case 'context-used': {
@@ -216,7 +226,9 @@ export function renderWidget(config: WidgetConfig, context: WidgetRenderContext)
         case 'lines-removed':
             return numericValue(config, '-', status.cost.linesRemoved, value => String(value));
         case 'allow-all':
-            return status.allowAll === true ? renderValue(config, '', 'YOLO') : null;
+            return status.allowAll === undefined
+                ? null
+                : renderValue(config, 'Allow All', status.allowAll ? 'ON' : 'OFF');
         case 'git-branch': {
             const branch = cachedCommand(`git-branch:${status.cwd ?? ''}`, context.gitCacheTtlSeconds, () => runFile('git', ['--no-optional-locks', 'branch', '--show-current'], status.cwd));
             return branch === null ? null : renderValue(config, '', branch);
