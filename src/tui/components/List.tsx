@@ -13,6 +13,8 @@ import {
     type ReactElement
 } from 'react';
 
+import { getVerticalNavigationDirection } from '../vertical-navigation';
+
 export interface ListEntry<V = string | number> {
     label: string;
     sublabel?: string;
@@ -65,15 +67,15 @@ export function List<V = string | number>({
         }
     }, [selectedIndex, selectedValue]);
 
-    useInput((_, key) => {
+    useInput((input, key) => {
         if (selectableItems.length === 0) {
             return;
         }
 
-        if (key.upArrow) {
-            setSelectedIndex(index => index === 0 ? selectableItems.length - 1 : index - 1);
-        } else if (key.downArrow) {
-            setSelectedIndex(index => index === selectableItems.length - 1 ? 0 : index + 1);
+        const direction = getVerticalNavigationDirection(input, key);
+
+        if (direction !== null) {
+            setSelectedIndex(index => (index + direction + selectableItems.length) % selectableItems.length);
         } else if (key.return && selectedItem !== undefined) {
             onSelect(selectedItem.value, selectedIndex);
         }

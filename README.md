@@ -26,6 +26,8 @@ Choose `Install or repair Copilot integration`, or install non-interactively:
 npx -y @willh/copilotstatusline@latest --install npm
 ```
 
+Interactive menus support both the arrow keys and Vim-style navigation: `j` moves down and `k` moves up. Text and search inputs continue to treat these keys as ordinary characters.
+
 The installer merges the following keys into the existing Copilot settings and preserves unrelated settings:
 
 ```json

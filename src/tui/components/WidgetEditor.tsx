@@ -18,6 +18,7 @@ import type {
 } from '../../types/Settings';
 import { WidgetConfigSchema } from '../../types/Settings';
 import { WIDGET_CATALOG } from '../../widgets/catalog';
+import { getVerticalNavigationDirection } from '../vertical-navigation';
 
 import { List } from './List';
 import { getEditorGlobalKeyAction } from './widget-editor-input';
@@ -250,8 +251,9 @@ export function WidgetEditor({
         }
 
         if (moveMode) {
-            if ((key.upArrow || key.downArrow) && widgets.length > 1) {
-                const direction = key.upArrow ? -1 : 1;
+            const direction = getVerticalNavigationDirection(input, key);
+
+            if (direction !== null && widgets.length > 1) {
                 const target = (selectedIndex + direction + widgets.length) % widgets.length;
                 const reordered = [...widgets];
                 const current = reordered[selectedIndex];
@@ -281,9 +283,10 @@ export function WidgetEditor({
             return;
         }
 
-        if ((key.upArrow || key.downArrow) && widgets.length > 0) {
-            const direction = key.upArrow ? -1 : 1;
-            setSelectedIndex((selectedIndex + direction + widgets.length) % widgets.length);
+        const direction = getVerticalNavigationDirection(input, key);
+
+        if (direction !== null && widgets.length > 0) {
+            setSelectedIndex(index => (index + direction + widgets.length) % widgets.length);
         } else if ((key.leftArrow || key.rightArrow) && currentWidget !== undefined) {
             openPicker('change');
         } else if (key.return && currentWidget !== undefined) {
@@ -296,7 +299,7 @@ export function WidgetEditor({
             const next = widgets.filter((_, index) => index !== selectedIndex);
             onUpdate(next);
             setSelectedIndex(Math.max(0, Math.min(selectedIndex, next.length - 1)));
-        } else if (input === 'k' && currentWidget !== undefined) {
+        } else if (input === 'y' && currentWidget !== undefined) {
             const clone = { ...currentWidget, id: randomUUID() };
             const next = [...widgets];
             next.splice(selectedIndex + 1, 0, clone);
@@ -437,8 +440,8 @@ export function WidgetEditor({
             </Text>
             <Text dimColor>
                 {moveMode
-                    ? '↑↓ move widget, ESC or Enter exit move mode'
-                    : '↑↓ select, ←→ change, Enter move, (a)dd, (i)nsert, (k) clone, (d)elete, (c)lear'}
+                    ? '↑↓/j/k move widget, ESC or Enter exit move mode'
+                    : '↑↓/j/k select, ←→ change, Enter move, (a)dd, (i)nsert, (y) clone, (d)elete, (c)lear'}
             </Text>
             <Text dimColor>
                 {moveMode

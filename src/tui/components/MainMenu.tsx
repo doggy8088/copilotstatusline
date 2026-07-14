@@ -114,6 +114,7 @@ export function MainMenu({
     return (
         <Box flexDirection='column'>
             <Text bold>Main Menu</Text>
+            <Text dimColor>↑↓ or j/k to select, Enter to open</Text>
             <List
                 items={menuItems(integration, hasChanges)}
                 marginTop={1}

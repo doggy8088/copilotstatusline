@@ -67,6 +67,8 @@ Uninstallation removes `statusLine` only when its command is recognized as belon
 
 ## Formatter settings
 
+The interactive editor accepts Up/Down arrows or Vim-style `k`/`j` for vertical navigation. The same shortcuts move lines and widgets while move mode is active. Widget search and text-editing fields keep `j` and `k` as normal text input. In the widget editor, `y` clones the selected widget.
+
 Default path:
 
 ```text

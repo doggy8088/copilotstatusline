@@ -10,6 +10,7 @@ import {
 } from 'react';
 
 import type { Settings } from '../../types/Settings';
+import { getVerticalNavigationDirection } from '../vertical-navigation';
 
 import {
     List,
@@ -97,8 +98,9 @@ export function LineSelector({
         }
 
         if (moveMode) {
-            if ((key.upArrow || key.downArrow) && lines.length > 1) {
-                const direction = key.upArrow ? -1 : 1;
+            const direction = getVerticalNavigationDirection(input, key);
+
+            if (direction !== null && lines.length > 1) {
                 const target = (selectedIndex + direction + lines.length) % lines.length;
                 const reordered = [...lines];
                 const current = reordered[selectedIndex];
@@ -159,10 +161,10 @@ export function LineSelector({
             <Text dimColor>Choose which status line to configure</Text>
             <Text dimColor>
                 {moveMode
-                    ? '↑↓ to move line, ESC or Enter to exit move mode'
+                    ? '↑↓/j/k to move line, ESC or Enter to exit move mode'
                     : allowEditing
-                        ? '(a) append line, (d) delete line, (m) move line, ESC back'
-                        : 'ESC to go back'}
+                        ? '↑↓/j/k select, (a) append line, (d) delete line, (m) move line, ESC back'
+                        : '↑↓/j/k select, ESC to go back'}
             </Text>
             {moveMode
                 ? (

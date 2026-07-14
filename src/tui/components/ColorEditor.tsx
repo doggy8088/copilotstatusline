@@ -16,6 +16,7 @@ import type {
 import { COLORS } from '../../types/Settings';
 import { styleText } from '../../utils/ansi';
 import { WIDGET_CATALOG } from '../../widgets/catalog';
+import { getVerticalNavigationDirection } from '../vertical-navigation';
 
 import { List } from './List';
 
@@ -116,9 +117,10 @@ export function ColorEditor({
             return;
         }
 
-        if (key.upArrow || key.downArrow) {
-            const direction = key.upArrow ? -1 : 1;
-            setSelectedIndex((selectedIndex + direction + widgets.length) % widgets.length);
+        const direction = getVerticalNavigationDirection(input, key);
+
+        if (direction !== null) {
+            setSelectedIndex(index => (index + direction + widgets.length) % widgets.length);
         } else if ((key.leftArrow || key.rightArrow) && selectedWidget !== undefined) {
             const direction = key.leftArrow ? -1 : 1;
             const field = editingBackground ? 'backgroundColor' : 'color';
@@ -187,7 +189,7 @@ export function ColorEditor({
                 {editingBackground ? <Text color='yellow'> [Background Mode]</Text> : null}
             </Text>
             <Text dimColor>
-                ↑↓ select, ←→ cycle
+                ↑↓/j/k select, ←→ cycle
                 {' '}
                 {editingBackground ? 'background' : 'foreground'}
                 , (f) toggle bg/fg, (b)old, (r)eset, (c)lear all, ESC back
