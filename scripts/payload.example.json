@@ -1,53 +1,33 @@
 {
-  "hook_event_name": "Status",
-  "session_id": "abc123...",
-  "transcript_path": "/path/to/transcript.json",
-  "cwd": "/current/working/directory",
+  "session_id": "a196c973-9751-4138-9fc3-fcfc76691094",
+  "session_name": "Build Copilot statusline",
+  "transcript_path": "/Users/example/.copilot/session-state/a196c973-9751-4138-9fc3-fcfc76691094",
+  "cwd": "/Users/example/projects/copilotstatusline",
+  "version": "1.0.71-0",
   "model": {
-    "id": "claude-opus-4-6[1m]",
-    "display_name": "Opus 4.6 (1M context)"
+    "id": "gpt-5.4",
+    "display_name": "GPT-5.4"
   },
-  "workspace": {
-    "current_dir": "/current/working/directory",
-    "project_dir": "/original/project/directory",
-    "added_dirs": []
-  },
-  "version": "2.1.80",
-  "output_style": {
-    "name": "default"
+  "reasoning_effort": "high",
+  "allow_all": false,
+  "context_window": {
+    "total_input_tokens": 698833,
+    "total_output_tokens": 5726,
+    "total_cache_read_tokens": 582656,
+    "total_cache_write_tokens": 0,
+    "total_reasoning_tokens": 2880,
+    "total_tokens": 704559,
+    "last_call_input_tokens": 34890,
+    "last_call_output_tokens": 1320,
+    "current_context_tokens": 56320,
+    "displayed_context_limit": 200000,
+    "current_context_used_percentage": 28.16
   },
   "cost": {
-    "total_cost_usd": 0.01234,
-    "total_duration_ms": 45000,
-    "total_api_duration_ms": 2300,
-    "total_lines_added": 156,
-    "total_lines_removed": 23
-  },
-  "context_window": {
-    "total_input_tokens": 50113,
-    "total_output_tokens": 10462,
-    "context_window_size": 1000000,
-    "current_usage": {
-      "input_tokens": 8500,
-      "output_tokens": 1200,
-      "cache_creation_input_tokens": 5000,
-      "cache_read_input_tokens": 2000
-    },
-    "used_percentage": 8,
-    "remaining_percentage": 92
-  },
-  "exceeds_200k_tokens": false,
-  "rate_limits": {
-    "five_hour": {
-      "used_percentage": 42,
-      "resets_at": 1774020000
-    },
-    "seven_day": {
-      "used_percentage": 15,
-      "resets_at": 1774540000
-    }
-  },
-  "vim": {
-    "mode": "NORMAL"
+    "total_api_duration_ms": 15420,
+    "total_duration_ms": 48210,
+    "total_premium_requests": 2,
+    "total_lines_added": 84,
+    "total_lines_removed": 17
   }
 }

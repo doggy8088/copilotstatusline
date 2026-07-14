@@ -1,35 +1,33 @@
 {
-  "name": "ccstatusline",
-  "version": "2.2.23",
+  "name": "copilotstatusline",
+  "version": "0.1.0",
   "bugs": {
-    "url": "https://github.com/sirmalloc/ccstatusline/issues"
+    "url": "https://github.com/sirmalloc/copilotstatusline/issues"
   },
-  "description": "A customizable status line formatter for Claude Code CLI",
-  "main": "./dist/ccstatusline.js",
-  "module": "./dist/ccstatusline.js",
+  "description": "A customizable status line formatter for GitHub Copilot CLI",
+  "main": "./dist/copilotstatusline.js",
+  "module": "./dist/copilotstatusline.js",
   "type": "module",
   "bin": {
-    "ccstatusline": "./dist/ccstatusline.js"
+    "copilotstatusline": "./dist/copilotstatusline.js"
   },
   "exports": {
     ".": {
-      "import": "./dist/ccstatusline.js",
-      "default": "./dist/ccstatusline.js"
+      "import": "./dist/copilotstatusline.js",
+      "default": "./dist/copilotstatusline.js"
     },
     "./package.json": "./package.json"
   },
   "files": [
-    "dist/"
+    "dist/",
+    "docs/",
+    "NOTICE"
   ],
   "scripts": {
-    "start": "bun run src/ccstatusline.ts",
-    "build": "rm -rf dist/* ; bun build src/ccstatusline.ts --target=node --outfile=dist/ccstatusline.js --target-version=14",
+    "start": "bun run src/copilotstatusline.ts",
+    "build": "rm -rf dist/* && bun build src/copilotstatusline.ts --target=node --outfile=dist/copilotstatusline.js --target-version=22",
     "postbuild": "bun run scripts/replace-version.ts",
-    "example": "cat scripts/payload.example.json | bun start",
-    "video:studio": "remotion studio remotion/index.ts",
-    "video:still": "remotion still remotion/index.ts ccstatusline-tui-demo out/ccstatusline-tui-demo.png --frame=700 --scale=0.5",
-    "video:render": "remotion render remotion/index.ts ccstatusline-tui-demo out/ccstatusline-tui-demo.mp4",
-    "video:gif": "bun run video:render && ffmpeg -y -i out/ccstatusline-tui-demo.mp4 -filter_complex \"fps=12,scale=1322:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=256[p];[s1][p]paletteuse=dither=none:diff_mode=rectangle\" out/ccstatusline-tui-demo-unoptimized.gif && gifsicle -O3 --lossy=30 out/ccstatusline-tui-demo-unoptimized.gif -o out/ccstatusline-tui-demo.gif",
+    "example": "bun run src/copilotstatusline.ts < scripts/payload.example.json",
     "prepublishOnly": "bun run build",
     "lint": "bun tsc --noEmit && eslint . --config eslint.config.js --max-warnings=0",
     "lint:fix": "bun tsc --noEmit && eslint . --config eslint.config.js --max-warnings=0 --fix",
@@ -38,13 +36,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@remotion/cli": "^4.0.459",
     "@stylistic/eslint-plugin": "^5.2.3",
     "@types/bun": "latest",
-    "@types/pluralize": "^0.0.33",
     "@types/react": "^19.1.10",
-    "@types/react-dom": "^19.2.3",
-    "chalk": "^5.5.0",
     "eslint": "^10.0.0",
     "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-import-newlines": "^2.0.0",
@@ -52,17 +46,13 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "globals": "^17.3.0",
-    "https-proxy-agent": "^8.0.0",
     "ink": "6.2.0",
-    "ink-gradient": "^4.0.0",
     "ink-select-input": "^6.2.0",
-    "pluralize": "^8.0.0",
+    "ink-text-input": "^6.0.0",
     "react": "19.2.7",
-    "react-devtools-core": "^7.0.1",
-    "react-dom": "19.2.7",
-    "remotion": "^4.0.459",
+    "slice-ansi": "^7.1.2",
+    "string-width": "^8.1.0",
     "strip-ansi": "^7.1.0",
-    "tinyglobby": "^0.2.14",
     "typedoc": "^0.28.12",
     "typescript": "^6.0.2",
     "typescript-eslint": "^8.39.1",
@@ -70,8 +60,8 @@
     "zod": "^4.0.17"
   },
   "keywords": [
-    "claude",
-    "claude-code",
+    "github-copilot",
+    "copilot-cli",
     "cli",
     "status-line",
     "terminal"
@@ -80,15 +70,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sirmalloc/ccstatusline.git"
+    "url": "git+https://github.com/sirmalloc/copilotstatusline.git"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=22.0.0"
   },
   "trustedDependencies": [
     "unrs-resolver"
-  ],
-  "patchedDependencies": {
-    "ink@6.2.0": "patches/ink@6.2.0.patch"
-  }
+  ]
 }

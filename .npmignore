@@ -6,8 +6,6 @@ scripts/
 
 # Development files
 bun.lock
-CLAUDE.md
-.claude/
 test-settings.json
 
 # Build files

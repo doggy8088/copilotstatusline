@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   publish:
-    if: github.repository == 'sirmalloc/ccstatusline'
+    if: github.repository == 'sirmalloc/copilotstatusline'
     name: Publish to npm
     runs-on: ubuntu-latest
     steps:
@@ -31,6 +31,6 @@ jobs:
           gh release create "$GITHUB_REF_NAME"
           --title "$GITHUB_REF_NAME"
           --generate-notes
-          --notes "Published to npm: https://www.npmjs.com/package/ccstatusline"
+          --notes "Published to npm: https://www.npmjs.com/package/copilotstatusline"
         env:
           GH_TOKEN: ${{ github.token }}

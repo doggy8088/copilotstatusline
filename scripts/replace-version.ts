@@ -1,28 +1,12 @@
-#!/usr/bin/env bun
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 
-import {
-    readFileSync,
-    writeFileSync
-} from 'fs';
-import { join } from 'path';
+interface PackageJson { version: string }
 
-interface PackageJson {
-    version: string;
-    [key: string]: unknown;
-}
-
-// Read package.json to get version
-const packageJson = JSON.parse(readFileSync('package.json', 'utf-8')) as PackageJson;
-const version = packageJson.version;
-
-// Read the bundled file
-const bundledFilePath = join('dist', 'ccstatusline.js');
-let bundledContent = readFileSync(bundledFilePath, 'utf-8');
-
-// Replace the placeholder with the actual version
-bundledContent = bundledContent.replace(/__PACKAGE_VERSION__/g, version);
-
-// Write back the modified content
-writeFileSync(bundledFilePath, bundledContent);
-
-console.log(`✓ Replaced version placeholder with ${version}`);
+const root = path.resolve(import.meta.dirname, '..');
+const packageJson = JSON.parse(
+    fs.readFileSync(path.join(root, 'package.json'), 'utf8')
+) as PackageJson;
+const outputPath = path.join(root, 'dist', 'copilotstatusline.js');
+const output = fs.readFileSync(outputPath, 'utf8');
+fs.writeFileSync(outputPath, output.replaceAll('__PACKAGE_VERSION__', packageJson.version), 'utf8');
