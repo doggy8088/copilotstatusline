@@ -4,25 +4,19 @@ import {
     useApp,
     useInput
 } from 'ink';
-import SelectInput from 'ink-select-input';
+import Gradient from 'ink-gradient';
 import TextInput from 'ink-text-input';
-import { randomUUID } from 'node:crypto';
-import React, {
+import { spawn } from 'node:child_process';
+import {
     useCallback,
+    useEffect,
+    useMemo,
     useState,
     type ReactElement
 } from 'react';
 
-import type {
-    ColorName,
-    Settings,
-    WidgetConfig,
-    WidgetType
-} from '../types/Settings';
-import {
-    COLORS,
-    WidgetConfigSchema
-} from '../types/Settings';
+import packageJson from '../../package.json';
+import type { Settings } from '../types/Settings';
 import {
     getSettingsLoadError,
     getSettingsPath,
@@ -36,357 +30,381 @@ import {
     type CopilotIntegrationStatus,
     type InstallCommandMode
 } from '../utils/copilot-settings';
-import { WIDGET_CATALOG } from '../widgets/catalog';
+
+import { ColorEditor } from './components/ColorEditor';
+import { LineSelector } from './components/LineSelector';
+import {
+    List,
+    type ListEntry
+} from './components/List';
+import {
+    MainMenu,
+    type MainMenuOption
+} from './components/MainMenu';
+import { StatusLinePreview } from './components/StatusLinePreview';
+import { WidgetEditor } from './components/WidgetEditor';
 
 interface AppProps {
     settings: Settings;
     integration: CopilotIntegrationStatus | null;
 }
 
-type Screen = 'menu' | 'editor' | 'install';
-type EditableField = 'command' | 'prefix' | 'suffix' | 'value';
+type Screen = 'main'
+    | 'lines'
+    | 'items'
+    | 'colorLines'
+    | 'colors'
+    | 'powerline'
+    | 'terminal'
+    | 'overrides'
+    | 'installation'
+    | 'confirmSave';
 
-const MENU_ITEMS = [
-    { label: 'Edit status lines', value: 'edit' },
-    { label: 'Toggle Powerline', value: 'powerline' },
-    { label: 'Install or repair Copilot integration', value: 'install' },
-    { label: 'Uninstall Copilot integration', value: 'uninstall' },
-    { label: 'Save and exit', value: 'save' },
-    { label: 'Exit without saving', value: 'exit' }
-];
-
-const INSTALL_ITEMS: { label: string; value: InstallCommandMode | 'back' }[] = [
-    { label: 'npx -y @willh/copilotstatusline@latest', value: 'npm' },
-    { label: 'bunx -y @willh/copilotstatusline@latest', value: 'bunx' },
-    { label: 'Global copilotstatusline binary', value: 'global' },
-    { label: 'Back', value: 'back' }
-];
-
-function cycleColor(color: ColorName): ColorName {
-    const index = COLORS.indexOf(color);
-    return COLORS[(index + 1) % COLORS.length] ?? 'none';
+interface FlashMessage {
+    text: string;
+    color: 'green' | 'red' | 'yellow';
 }
 
-function primaryEditableField(widget: WidgetConfig | undefined): EditableField | null {
-    if (widget?.type === 'custom-command') {
-        return 'command';
-    }
-
-    if (widget?.type === 'custom-text' || widget?.type === 'separator') {
-        return 'value';
-    }
-
-    return null;
-}
-
-function Header({ integration }: { integration: CopilotIntegrationStatus | null }): ReactElement {
-    const status = integration === null
-        ? 'Copilot settings unavailable'
-        : integration.installed
-            ? `${integration.visible ? 'Installed' : 'Installed · custom footer hidden'} · Copilot ${integration.version ?? 'unknown'}`
-            : 'Not installed';
-
+function GradientTitle(): ReactElement {
     return (
-        <Box flexDirection='column' marginBottom={1}>
-            <Text bold color='cyan'>copilotstatusline</Text>
-            <Text dimColor>{status}</Text>
-        </Box>
+        <Text bold>
+            <Gradient name='retro'>CopilotStatusline Configuration</Gradient>
+        </Text>
     );
 }
 
-interface WidgetEditorProps {
+interface BackableProps { onBack: () => void }
+
+interface PowerlineSetupProps extends BackableProps {
     settings: Settings;
     onChange: (settings: Settings) => void;
-    onBack: () => void;
 }
 
-function WidgetEditor({ settings, onChange, onBack }: WidgetEditorProps): ReactElement {
-    const [lineIndex, setLineIndex] = useState(0);
-    const [selectedIndex, setSelectedIndex] = useState(0);
-    const [adding, setAdding] = useState(false);
-    const [editingField, setEditingField] = useState<EditableField | null>(null);
-    const [editingValue, setEditingValue] = useState('');
-    const currentLine = settings.lines[lineIndex] ?? [];
-    const selectedWidget = currentLine[selectedIndex];
+function PowerlineSetup({ settings, onChange, onBack }: PowerlineSetupProps): ReactElement {
+    const [editingSeparator, setEditingSeparator] = useState(false);
+    const [separator, setSeparator] = useState(settings.powerline.separator);
 
-    const updateSelected = useCallback((update: (widget: WidgetConfig) => WidgetConfig) => {
-        if (selectedWidget === undefined) {
-            return;
-        }
-
-        const lines = settings.lines.map((line, index) => index === lineIndex
-            ? line.map((widget, widgetIndex) => widgetIndex === selectedIndex ? update(widget) : widget)
-            : line);
-        onChange({ ...settings, lines });
-    }, [lineIndex, onChange, selectedIndex, selectedWidget, settings]);
-
-    const startEditing = useCallback((field: EditableField) => {
-        if (selectedWidget === undefined) {
-            return;
-        }
-
-        setEditingField(field);
-        setEditingValue(selectedWidget[field] ?? '');
-    }, [selectedWidget]);
-
-    const finishEditing = useCallback((value: string) => {
-        if (editingField !== null) {
-            updateSelected(widget => ({ ...widget, [editingField]: value }));
-        }
-
-        setEditingField(null);
-        setEditingValue('');
-    }, [editingField, updateSelected]);
-
-    useInput((input, key) => {
-        if (adding) {
-            if (key.escape) {
-                setAdding(false);
-            }
-
-            return;
-        }
-
-        if (editingField !== null) {
-            if (key.escape) {
-                setEditingField(null);
-                setEditingValue('');
-            }
-
-            return;
-        }
-
+    useInput((_, key) => {
         if (key.escape) {
-            onBack();
-        } else if (key.upArrow) {
-            setSelectedIndex(value => Math.max(0, value - 1));
-        } else if (key.downArrow) {
-            setSelectedIndex(value => Math.min(Math.max(0, currentLine.length - 1), value + 1));
-        } else if (key.tab) {
-            setLineIndex(value => (value + 1) % settings.lines.length);
-            setSelectedIndex(0);
-        } else if (input === 'a') {
-            setAdding(true);
-        } else if (input === 'n') {
-            onChange({ ...settings, lines: [...settings.lines, []] });
-            setLineIndex(settings.lines.length);
-            setSelectedIndex(0);
-        } else if (input === 'd' && settings.lines.length > 1) {
-            const lines = settings.lines.filter((_, index) => index !== lineIndex);
-            onChange({ ...settings, lines });
-            setLineIndex(value => Math.max(0, Math.min(value, lines.length - 1)));
-            setSelectedIndex(0);
-        } else if (input === 'x' && currentLine[selectedIndex] !== undefined) {
-            const lines = settings.lines.map((line, index) => index === lineIndex
-                ? line.filter((_, widgetIndex) => widgetIndex !== selectedIndex)
-                : line);
-            onChange({ ...settings, lines });
-            setSelectedIndex(value => Math.max(0, value - 1));
-        } else if ((input === '[' || input === ']') && currentLine[selectedIndex] !== undefined) {
-            const offset = input === '[' ? -1 : 1;
-            const target = Math.max(0, Math.min(currentLine.length - 1, selectedIndex + offset));
-
-            if (target !== selectedIndex) {
-                const reordered = [...currentLine];
-                const [item] = reordered.splice(selectedIndex, 1);
-
-                if (item !== undefined) {
-                    reordered.splice(target, 0, item);
-                }
-
-                const lines = settings.lines.map((line, index) => index === lineIndex ? reordered : line);
-                onChange({ ...settings, lines });
-                setSelectedIndex(target);
+            if (editingSeparator) {
+                setEditingSeparator(false);
+                setSeparator(settings.powerline.separator);
+            } else {
+                onBack();
             }
-        } else if (input === 'c' && currentLine[selectedIndex] !== undefined) {
-            updateSelected(widget => ({ ...widget, color: cycleColor(widget.color) }));
-        } else if (input === 'g' && currentLine[selectedIndex] !== undefined) {
-            updateSelected(widget => ({
-                ...widget,
-                backgroundColor: cycleColor(widget.backgroundColor)
-            }));
-        } else if (input === 'b' && currentLine[selectedIndex] !== undefined) {
-            updateSelected(widget => ({ ...widget, bold: !widget.bold }));
-        } else if (input === 'r' && currentLine[selectedIndex] !== undefined) {
-            updateSelected(widget => ({ ...widget, raw: !widget.raw }));
-        } else if (input === 'm' && currentLine[selectedIndex] !== undefined) {
-            updateSelected(widget => ({ ...widget, merge: !widget.merge }));
-        } else if (input === 'z' && currentLine[selectedIndex] !== undefined) {
-            updateSelected(widget => ({ ...widget, hideWhenZero: !widget.hideWhenZero }));
-        } else if (input === 'e') {
-            const field = primaryEditableField(selectedWidget);
-
-            if (field !== null) {
-                startEditing(field);
-            }
-        } else if (input === 'p') {
-            startEditing('prefix');
-        } else if (input === 's') {
-            startEditing('suffix');
         }
     });
 
-    const addWidget = useCallback((type: WidgetType) => {
-        const catalog = WIDGET_CATALOG.find(entry => entry.type === type);
-        const extra: Partial<WidgetConfig> = type === 'custom-text'
-            ? { value: 'text' }
-            : type === 'custom-command'
-                ? { command: 'printf ok' }
-                : type === 'separator'
-                    ? { value: '|' }
-                    : {};
-        const created = WidgetConfigSchema.parse({
-            id: randomUUID(),
-            type,
-            color: catalog?.defaultColor ?? 'none',
-            ...extra
-        });
-        const lines = settings.lines.map((line, index) => index === lineIndex
-            ? [...line, created]
-            : line);
-        onChange({ ...settings, lines });
-        setSelectedIndex(currentLine.length);
-        setAdding(false);
-    }, [currentLine.length, lineIndex, onChange, settings]);
-
-    if (adding) {
+    if (editingSeparator) {
         return (
             <Box flexDirection='column'>
-                <Text bold>Add widget</Text>
-                <SelectInput
-                    items={WIDGET_CATALOG.map(entry => ({
-                        label: `${entry.name} — ${entry.description}`,
-                        value: entry.type
-                    }))}
-                    onSelect={(item) => { addWidget(item.value); }}
-                />
-                <Text dimColor>Esc cancels.</Text>
-            </Box>
-        );
-    }
-
-    if (editingField !== null) {
-        return (
-            <Box flexDirection='column'>
-                <Text bold>
-                    Edit
-                    {editingField}
-                </Text>
-                <TextInput
-                    value={editingValue}
-                    onChange={setEditingValue}
-                    onSubmit={finishEditing}
-                />
-                <Text dimColor>Enter applies · Esc cancels</Text>
+                <Text bold>Edit Powerline Separator</Text>
+                <Box marginTop={1}>
+                    <Text color='cyan'>&gt; </Text>
+                    <TextInput
+                        value={separator}
+                        onChange={setSeparator}
+                        onSubmit={(value) => {
+                            onChange({
+                                ...settings,
+                                powerline: { ...settings.powerline, separator: value || '' }
+                            });
+                            setEditingSeparator(false);
+                        }}
+                    />
+                </Box>
+                <Text dimColor>Enter apply, ESC cancel</Text>
             </Box>
         );
     }
 
     return (
         <Box flexDirection='column'>
-            <Text bold>
-                Line
-                {lineIndex + 1}
-                {' '}
-                of
-                {settings.lines.length}
-            </Text>
-            {currentLine.length === 0
-                ? <Text dimColor>Empty line</Text>
-                : currentLine.map((widget, index) => (
-                    <Text key={widget.id}>
-                        {index === selectedIndex ? '❯ ' : '  '}
-                        {widget.type}
-                        {' '}
-                        <Text dimColor>
-                            {widget.color}
-                            {widget.bold ? ' bold' : ''}
-                            {widget.raw ? ' raw' : ''}
-                            {widget.merge ? ' merged' : ''}
-                            {widget.hideWhenZero ? ' hide-zero' : ''}
-                        </Text>
-                    </Text>
-                ))}
-            <Box marginTop={1} flexDirection='column'>
-                <Text dimColor>↑↓ select · Tab next line · a add · x remove · [ ] move</Text>
-                <Text dimColor>c fg · g bg · b bold · r raw · m merge · z hide zero</Text>
-                <Text dimColor>e value/command · p prefix · s suffix · n new · d delete · Esc back</Text>
-            </Box>
+            <Text bold>Powerline Setup</Text>
+            <Text dimColor>Configure segment rendering and separators</Text>
+            <List
+                marginTop={1}
+                showBackButton
+                items={[
+                    {
+                        label: settings.powerline.enabled ? '◉ Powerline enabled' : '○ Powerline disabled',
+                        value: 'toggle',
+                        description: 'Toggle filled Powerline segments in the status line renderer'
+                    },
+                    {
+                        label: `Separator: ${settings.powerline.separator}`,
+                        value: 'separator',
+                        description: 'Change the Powerline transition glyph'
+                    }
+                ]}
+                onSelect={(value) => {
+                    if (value === 'back') {
+                        onBack();
+                    } else if (value === 'toggle') {
+                        onChange({
+                            ...settings,
+                            powerline: {
+                                ...settings.powerline,
+                                enabled: !settings.powerline.enabled
+                            }
+                        });
+                    } else {
+                        setSeparator(settings.powerline.separator);
+                        setEditingSeparator(true);
+                    }
+                }}
+            />
         </Box>
     );
 }
 
-export function App({ settings: initialSettings, integration: initialIntegration }: AppProps): ReactElement {
+interface TerminalOptionsProps extends BackableProps {
+    settings: Settings;
+    onChange: (settings: Settings) => void;
+}
+
+function TerminalOptions({ settings, onChange, onBack }: TerminalOptionsProps): ReactElement {
+    useInput((_, key) => {
+        if (key.escape) {
+            onBack();
+        }
+    });
+    const levels: ListEntry<number>[] = [
+        { label: 'No colors', value: 0, description: 'Disable ANSI color output' },
+        { label: '16 colors', value: 1, description: 'Use the basic ANSI terminal palette' },
+        { label: '256 colors', value: 2, description: 'Use the extended terminal palette' },
+        { label: 'True color', value: 3, description: 'Use 24-bit terminal color output' }
+    ].map(entry => ({
+        ...entry,
+        label: `${entry.value === settings.colorLevel ? '◉' : '○'} ${entry.label}`
+    }));
+
+    return (
+        <Box flexDirection='column'>
+            <Text bold>Terminal Options</Text>
+            <Text dimColor>Select the color capability used for rendering</Text>
+            <List
+                marginTop={1}
+                items={levels}
+                initialSelection={settings.colorLevel}
+                showBackButton
+                onSelect={(value) => {
+                    if (value === 'back') {
+                        onBack();
+                    } else {
+                        onChange({ ...settings, colorLevel: value });
+                    }
+                }}
+            />
+        </Box>
+    );
+}
+
+interface GlobalOverridesProps extends BackableProps {
+    settings: Settings;
+    onChange: (settings: Settings) => void;
+}
+
+function GlobalOverrides({ settings, onChange, onBack }: GlobalOverridesProps): ReactElement {
+    const [separator, setSeparator] = useState(settings.defaultSeparator);
+
+    useInput((_, key) => {
+        if (key.escape) {
+            onBack();
+        }
+    });
+
+    return (
+        <Box flexDirection='column'>
+            <Text bold>Global Overrides</Text>
+            <Text dimColor>Default separator inserted between visible widgets</Text>
+            <Box marginTop={1}>
+                <Text color='cyan'>&gt; </Text>
+                <TextInput
+                    value={separator}
+                    onChange={setSeparator}
+                    onSubmit={(value) => {
+                        onChange({ ...settings, defaultSeparator: value });
+                        onBack();
+                    }}
+                />
+            </Box>
+            <Text dimColor>Enter apply, ESC cancel</Text>
+        </Box>
+    );
+}
+
+interface InstallationMenuProps extends BackableProps {
+    integration: CopilotIntegrationStatus | null;
+    busy: boolean;
+    onInstall: (mode: InstallCommandMode) => void;
+    onUninstall: () => void;
+}
+
+function InstallationMenu({
+    integration,
+    busy,
+    onInstall,
+    onUninstall,
+    onBack
+}: InstallationMenuProps): ReactElement {
+    useInput((_, key) => {
+        if (key.escape && !busy) {
+            onBack();
+        }
+    });
+    const items: (ListEntry<InstallCommandMode | 'uninstall'> | '-')[] = [
+        {
+            label: 'npx -y @willh/copilotstatusline@latest',
+            value: 'npm',
+            description: 'Use the latest npm package for each Copilot CLI status refresh'
+        },
+        {
+            label: 'bunx -y @willh/copilotstatusline@latest',
+            value: 'bunx',
+            description: 'Use the latest npm package through Bun for each status refresh'
+        },
+        {
+            label: 'Global copilotstatusline binary',
+            value: 'global',
+            description: 'Use the copilotstatusline command already available on PATH'
+        },
+        ...(integration?.installed === true
+            ? [
+                '-' as const,
+                {
+                    label: 'Uninstall from Copilot CLI',
+                    value: 'uninstall' as const,
+                    description: 'Remove only the status line command owned by this package'
+                }
+            ]
+            : [])
+    ];
+
+    if (busy) {
+        return (
+            <Box flexDirection='column'>
+                <Text bold>Manage Installation</Text>
+                <Box marginTop={1}><Text color='cyan'>Working…</Text></Box>
+            </Box>
+        );
+    }
+
+    return (
+        <Box flexDirection='column'>
+            <Text bold>{integration?.installed === true ? 'Manage Installation' : 'Install to Copilot CLI'}</Text>
+            <Text dimColor>User-level Copilot settings only</Text>
+            <List
+                marginTop={1}
+                items={items}
+                showBackButton
+                onSelect={(value) => {
+                    if (value === 'back') {
+                        onBack();
+                    } else if (value === 'uninstall') {
+                        onUninstall();
+                    } else {
+                        onInstall(value);
+                    }
+                }}
+            />
+        </Box>
+    );
+}
+
+function openProjectRepository(): void {
+    const url = 'https://github.com/doggy8088/copilotstatusline';
+    const command = process.platform === 'darwin'
+        ? 'open'
+        : process.platform === 'win32'
+            ? 'cmd'
+            : 'xdg-open';
+    const args = process.platform === 'win32' ? ['/c', 'start', '', url] : [url];
+    const child = spawn(command, args, { detached: true, stdio: 'ignore' });
+    child.unref();
+}
+
+export function App({
+    settings: initialSettings,
+    integration: initialIntegration
+}: AppProps): ReactElement {
     const { exit } = useApp();
     const [settings, setSettings] = useState(initialSettings);
+    const [savedSettings, setSavedSettings] = useState(initialSettings);
     const [integration, setIntegration] = useState(initialIntegration);
-    const [screen, setScreen] = useState<Screen>('menu');
-    const [message, setMessage] = useState<string | null>(getSettingsLoadError());
+    const [screen, setScreen] = useState<Screen>('main');
+    const [selectedLine, setSelectedLine] = useState(0);
+    const [mainSelection, setMainSelection] = useState(0);
+    const [terminalWidth, setTerminalWidth] = useState(process.stdout.columns || 120);
+    const [flashMessage, setFlashMessage] = useState<FlashMessage | null>(null);
     const [busy, setBusy] = useState(false);
+    const [loadError, setLoadError] = useState(getSettingsLoadError());
+    const [pendingSaveExit, setPendingSaveExit] = useState(false);
+    const hasChanges = useMemo(
+        () => JSON.stringify(settings) !== JSON.stringify(savedSettings),
+        [savedSettings, settings]
+    );
 
-    const refreshIntegration = useCallback(async () => {
-        setIntegration(await inspectCopilotIntegration());
+    useEffect(() => {
+        const handleResize = () => {
+            setTerminalWidth(process.stdout.columns || 120);
+        };
+
+        process.stdout.on('resize', handleResize);
+        return () => { process.stdout.off('resize', handleResize); };
     }, []);
 
-    const handleMenu = useCallback(async (value: string) => {
-        if (value === 'edit') {
-            setScreen('editor');
+    useEffect(() => {
+        if (flashMessage === null) {
             return;
         }
 
-        if (value === 'powerline') {
-            setSettings(current => ({
-                ...current,
-                powerline: { ...current.powerline, enabled: !current.powerline.enabled }
-            }));
-            setMessage(`Powerline ${settings.powerline.enabled ? 'disabled' : 'enabled'}`);
-            return;
-        }
+        const timer = setTimeout(() => { setFlashMessage(null); }, 2_000);
+        return () => { clearTimeout(timer); };
+    }, [flashMessage]);
 
-        if (value === 'install') {
-            setScreen('install');
-            return;
-        }
+    const performSave = useCallback(async (exitAfterSave: boolean) => {
+        try {
+            await saveSettings(settings);
+            setSavedSettings(settings);
+            setLoadError(null);
 
-        if (value === 'uninstall') {
-            setBusy(true);
-
-            try {
-                const removed = await uninstallCopilotStatusLine();
-                setMessage(removed ? 'Copilot integration removed.' : 'No owned integration was found.');
-                await refreshIntegration();
-            } catch (error) {
-                setMessage(error instanceof Error ? error.message : String(error));
-            } finally {
-                setBusy(false);
-            }
-
-            return;
-        }
-
-        if (value === 'save') {
-            setBusy(true);
-
-            try {
-                await saveSettings(settings);
+            if (exitAfterSave) {
                 exit();
-            } catch (error) {
-                setMessage(error instanceof Error ? error.message : String(error));
-                setBusy(false);
+            } else {
+                setFlashMessage({ text: '✓ Configuration saved', color: 'green' });
             }
+        } catch (error) {
+            setFlashMessage({
+                text: error instanceof Error ? error.message : String(error),
+                color: 'red'
+            });
+        }
+    }, [exit, settings]);
 
+    const requestSave = useCallback((exitAfterSave: boolean) => {
+        if (loadError !== null) {
+            setPendingSaveExit(exitAfterSave);
+            setScreen('confirmSave');
             return;
         }
 
-        exit();
-    }, [exit, refreshIntegration, settings]);
+        void performSave(exitAfterSave);
+    }, [loadError, performSave]);
 
-    const handleInstall = useCallback(async (mode: InstallCommandMode | 'back') => {
-        if (mode === 'back') {
-            setScreen('menu');
-            return;
+    useInput((input, key) => {
+        if (key.ctrl && input === 'c') {
+            exit();
+        } else if (key.ctrl && input === 's' && screen !== 'confirmSave') {
+            requestSave(false);
         }
+    });
 
+    const refreshIntegration = useCallback(async () => {
+        setIntegration(await inspectCopilotIntegration().catch(() => null));
+    }, []);
+
+    const handleInstall = useCallback(async (mode: InstallCommandMode) => {
         setBusy(true);
 
         try {
@@ -395,43 +413,229 @@ export function App({ settings: initialSettings, integration: initialIntegration
                 isSettingsPathCustom() ? getSettingsPath() : undefined
             );
             await refreshIntegration();
-            setMessage(`Installed with ${mode}.`);
-            setScreen('menu');
+            setFlashMessage({ text: `Installed with ${mode}`, color: 'green' });
+            setScreen('main');
         } catch (error) {
-            setMessage(error instanceof Error ? error.message : String(error));
+            setFlashMessage({
+                text: error instanceof Error ? error.message : String(error),
+                color: 'red'
+            });
         } finally {
             setBusy(false);
         }
     }, [refreshIntegration]);
 
+    const handleUninstall = useCallback(async () => {
+        setBusy(true);
+
+        try {
+            const removed = await uninstallCopilotStatusLine();
+            await refreshIntegration();
+            setFlashMessage({
+                text: removed ? 'Copilot integration removed' : 'No owned integration was found',
+                color: removed ? 'green' : 'yellow'
+            });
+            setScreen('main');
+        } catch (error) {
+            setFlashMessage({
+                text: error instanceof Error ? error.message : String(error),
+                color: 'red'
+            });
+        } finally {
+            setBusy(false);
+        }
+    }, [refreshIntegration]);
+
+    const handleMainMenu = (value: MainMenuOption, index: number) => {
+        setMainSelection(index);
+
+        switch (value) {
+            case 'lines':
+                setScreen('lines');
+                break;
+            case 'colors':
+                setScreen('colorLines');
+                break;
+            case 'powerline':
+                setScreen('powerline');
+                break;
+            case 'terminal':
+                setScreen('terminal');
+                break;
+            case 'overrides':
+                setScreen('overrides');
+                break;
+            case 'installation':
+                setScreen('installation');
+                break;
+            case 'save':
+                requestSave(true);
+                break;
+            case 'github':
+                openProjectRepository();
+                setFlashMessage({ text: 'Opened project repository', color: 'green' });
+                break;
+            case 'exit':
+                exit();
+                break;
+        }
+    };
+
+    const updateSelectedLine = (widgets: Settings['lines'][number]) => {
+        setSettings(current => ({
+            ...current,
+            lines: current.lines.map((line, index) => index === selectedLine ? widgets : line)
+        }));
+    };
+
+    const screenContent = (() => {
+        switch (screen) {
+            case 'lines':
+                return (
+                    <LineSelector
+                        lines={settings.lines}
+                        allowEditing
+                        initialSelection={selectedLine}
+                        onLinesUpdate={(lines) => { setSettings({ ...settings, lines }); }}
+                        onSelect={(lineIndex) => {
+                            setSelectedLine(lineIndex);
+                            setScreen('items');
+                        }}
+                        onBack={() => { setScreen('main'); }}
+                    />
+                );
+            case 'items':
+                return (
+                    <WidgetEditor
+                        widgets={settings.lines[selectedLine] ?? []}
+                        lineNumber={selectedLine + 1}
+                        settings={settings}
+                        onUpdate={updateSelectedLine}
+                        onBack={() => { setScreen('lines'); }}
+                    />
+                );
+            case 'colorLines':
+                return (
+                    <LineSelector
+                        lines={settings.lines}
+                        title='Select Line to Configure Colors'
+                        initialSelection={selectedLine}
+                        onLinesUpdate={(lines) => { setSettings({ ...settings, lines }); }}
+                        onSelect={(lineIndex) => {
+                            setSelectedLine(lineIndex);
+                            setScreen('colors');
+                        }}
+                        onBack={() => { setScreen('main'); }}
+                    />
+                );
+            case 'colors':
+                return (
+                    <ColorEditor
+                        widgets={settings.lines[selectedLine] ?? []}
+                        lineNumber={selectedLine + 1}
+                        settings={settings}
+                        onUpdate={updateSelectedLine}
+                        onBack={() => { setScreen('colorLines'); }}
+                    />
+                );
+            case 'powerline':
+                return (
+                    <PowerlineSetup
+                        settings={settings}
+                        onChange={setSettings}
+                        onBack={() => { setScreen('main'); }}
+                    />
+                );
+            case 'terminal':
+                return (
+                    <TerminalOptions
+                        settings={settings}
+                        onChange={setSettings}
+                        onBack={() => { setScreen('main'); }}
+                    />
+                );
+            case 'overrides':
+                return (
+                    <GlobalOverrides
+                        settings={settings}
+                        onChange={setSettings}
+                        onBack={() => { setScreen('main'); }}
+                    />
+                );
+            case 'installation':
+                return (
+                    <InstallationMenu
+                        integration={integration}
+                        busy={busy}
+                        onInstall={(mode) => { void handleInstall(mode); }}
+                        onUninstall={() => { void handleUninstall(); }}
+                        onBack={() => { setScreen('main'); }}
+                    />
+                );
+            case 'confirmSave':
+                return (
+                    <Box flexDirection='column'>
+                        <Text bold color='yellow'>Replace Invalid Configuration?</Text>
+                        <Box marginTop={1}>
+                            <Text color='red' wrap='wrap'>{loadError}</Text>
+                        </Box>
+                        <Text dimColor>Saving replaces the malformed file with the current configuration.</Text>
+                        <List
+                            marginTop={1}
+                            color='cyan'
+                            items={[
+                                { label: 'Replace configuration', value: 'replace' },
+                                { label: '← Cancel', value: 'cancel' }
+                            ]}
+                            onSelect={(value) => {
+                                if (value === 'replace') {
+                                    setScreen('main');
+                                    void performSave(pendingSaveExit);
+                                } else {
+                                    setScreen('main');
+                                }
+                            }}
+                        />
+                    </Box>
+                );
+            case 'main':
+                return (
+                    <MainMenu
+                        integration={integration}
+                        hasChanges={hasChanges}
+                        initialSelection={mainSelection}
+                        onSelect={handleMainMenu}
+                    />
+                );
+        }
+    })();
+
     return (
-        <Box flexDirection='column' paddingX={1}>
-            <Header integration={integration} />
-            {message === null ? null : <Box marginBottom={1}><Text color='yellow'>{message}</Text></Box>}
-            {busy
-                ? <Text>Working…</Text>
-                : screen === 'editor'
-                    ? <WidgetEditor settings={settings} onChange={setSettings} onBack={() => { setScreen('menu'); }} />
-                    : screen === 'install'
-                        ? (
-                            <Box flexDirection='column'>
-                                <Text bold>Install command</Text>
-                                <SelectInput items={INSTALL_ITEMS} onSelect={item => void handleInstall(item.value)} />
-                            </Box>
-                        )
-                        : (
-                            <Box flexDirection='column'>
-                                <Text dimColor>
-                                    Config:
-                                    {getSettingsPath()}
-                                </Text>
-                                <Text dimColor>
-                                    Powerline:
-                                    {settings.powerline.enabled ? 'on' : 'off'}
-                                </Text>
-                                <SelectInput items={MENU_ITEMS} onSelect={item => void handleMenu(item.value)} />
-                            </Box>
-                        )}
+        <Box flexDirection='column'>
+            <Box marginBottom={1}>
+                <GradientTitle />
+                <Text bold dimColor>
+                    {' | v'}
+                    {packageJson.version}
+                </Text>
+                {flashMessage === null ? null : (
+                    <Text bold color={flashMessage.color}>
+                        {'  '}
+                        {flashMessage.text}
+                    </Text>
+                )}
+            </Box>
+            {loadError === null || screen === 'confirmSave' ? null : (
+                <Text color='red' wrap='wrap'>
+                    ⚠
+                    {' '}
+                    {loadError}
+                    {' — showing defaults; saving requires confirmation.'}
+                </Text>
+            )}
+            {isSettingsPathCustom() ? <Text dimColor>{`Config: ${getSettingsPath()}`}</Text> : null}
+            <StatusLinePreview settings={settings} terminalWidth={terminalWidth} />
+            <Box marginTop={1}>{screenContent}</Box>
         </Box>
     );
 }

@@ -98,6 +98,10 @@ bun test
 bun run build
 ```
 
+## Credits
+
+The interactive configuration UI and status-line editing experience are adapted from [ccstatusline](https://github.com/sirmalloc/ccstatusline), created by sirmalloc.
+
 ## Upstream references
 
 - [Copilot CLI configuration directory reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-config-dir-reference)

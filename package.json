@@ -1,6 +1,6 @@
 {
   "name": "@willh/copilotstatusline",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "bugs": {
     "url": "https://github.com/doggy8088/copilotstatusline/issues"
   },
@@ -47,6 +47,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "globals": "^17.3.0",
     "ink": "6.2.0",
+    "ink-gradient": "^4.0.0",
     "ink-select-input": "^6.2.0",
     "ink-text-input": "^6.0.0",
     "react": "19.2.7",
