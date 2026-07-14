@@ -53,7 +53,8 @@ copilotstatusline --install global      Install a global binary command
 copilotstatusline --uninstall           Remove an owned integration
 copilotstatusline --check               Print integration status as JSON
 copilotstatusline --config <path>       Use a custom formatter settings file
-copilotstatusline --version             Print the package version
+copilotstatusline -h                     Print help (alias: --help)
+copilotstatusline -v                     Print the package version (alias: --version)
 ```
 
 When `--config` is combined with `--install`, the absolute config path is included in Copilot's command setting.

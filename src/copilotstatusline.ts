@@ -1,5 +1,9 @@
 #!/usr/bin/env node
 import {
+    HELP_TEXT,
+    takeFlag
+} from './cli-options';
+import {
     CopilotStatusSchema,
     normalizeCopilotStatus
 } from './types/copilot-status';
@@ -48,17 +52,6 @@ function takeOption(name: string): string | undefined {
     return value;
 }
 
-function hasFlag(name: string): boolean {
-    const index = process.argv.indexOf(name);
-
-    if (index < 0) {
-        return false;
-    }
-
-    process.argv.splice(index, 1);
-    return true;
-}
-
 async function renderPipedStatus(): Promise<void> {
     const input = await readStdin();
 
@@ -88,7 +81,7 @@ async function renderPipedStatus(): Promise<void> {
 }
 
 async function runCommandMode(): Promise<boolean> {
-    if (hasFlag('--check')) {
+    if (takeFlag(process.argv, '--check')) {
         const status = await inspectCopilotIntegration();
         console.log(JSON.stringify(status, null, 2));
         return true;
@@ -112,7 +105,7 @@ async function runCommandMode(): Promise<boolean> {
         return true;
     }
 
-    if (hasFlag('--uninstall')) {
+    if (takeFlag(process.argv, '--uninstall')) {
         const removed = await uninstallCopilotStatusLine();
         console.log(removed
             ? 'Removed copilotstatusline from Copilot CLI settings.'
@@ -124,7 +117,12 @@ async function runCommandMode(): Promise<boolean> {
 }
 
 async function main(): Promise<void> {
-    if (hasFlag('--version')) {
+    if (takeFlag(process.argv, '-h', '--help')) {
+        console.log(HELP_TEXT);
+        return;
+    }
+
+    if (takeFlag(process.argv, '-v', '--version')) {
         console.log(PACKAGE_VERSION);
         return;
     }
