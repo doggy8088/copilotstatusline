@@ -21,6 +21,7 @@ import {
     type InstallCommandMode
 } from './utils/copilot-settings';
 import { renderStatusLines } from './utils/renderer';
+import { recordTokenUsage } from './utils/token-usage';
 
 const PACKAGE_VERSION = '__PACKAGE_VERSION__';
 
@@ -66,14 +67,25 @@ async function renderPipedStatus(): Promise<void> {
         throw new Error(`Invalid Copilot status JSON: ${parsed.error.message}`);
     }
 
+    const status = normalizeCopilotStatus(parsed.data);
+
+    try {
+        const recording = await recordTokenUsage(status);
+
+        if (recording.warning !== undefined) {
+            console.error(`copilotstatusline: ${recording.warning}`);
+        }
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(`copilotstatusline: unable to record token usage: ${message}`);
+    }
+
     const settings = await loadSettings();
     const warning = getSettingsLoadError();
 
     if (warning !== null) {
         console.error(`copilotstatusline: ${warning}; using defaults without overwriting the file`);
     }
-
-    const status = normalizeCopilotStatus(parsed.data);
 
     for (const line of renderStatusLines(status, settings)) {
         console.log(line);

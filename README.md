@@ -43,6 +43,17 @@ The installer merges the following keys into the existing Copilot settings and p
 
 Restart Copilot CLI after changing its settings.
 
+## Local token usage history
+
+Every valid Copilot status payload is recorded automatically as a local token-usage entry. No formatter setting or separate collector script is required. Records use the TokenUsageInsights-compatible JSONL format and are stored at:
+
+- `$COPILOT_HOME/usage/usage-YYYY-MM-DD.jsonl`, or `~/.copilot/usage/usage-YYYY-MM-DD.jsonl` by default;
+- `$COPILOT_HOME/copilotstatusline-usage-state.json` for per-session delta tracking.
+
+The history includes token counters plus local session metadata such as the session name, working directory, and transcript path. It is never uploaded, and status rendering does not make network calls. Set `COPILOTSTATUSLINE_DISABLE_USAGE_RECORDING=1` to disable recording. Uninstalling the status-line integration preserves existing history.
+
+TokenUsageInsights reads `~/.copilot/usage` by default. If `COPILOT_HOME` points elsewhere, set TokenUsageInsights' `COPILOT_DIR` to the same directory.
+
 ## Command line
 
 ```text

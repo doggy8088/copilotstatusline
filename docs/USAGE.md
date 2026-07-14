@@ -6,6 +6,29 @@ GitHub Copilot CLI executes the configured shell command and sends a JSON object
 
 Unknown payload fields are accepted for forward compatibility. Missing optional fields hide the corresponding widgets. Invalid known field types fail the invocation with a concise stderr message and a nonzero exit code.
 
+## Automatic token usage recording
+
+After a payload is validated, `copilotstatusline` automatically records cumulative and per-turn token usage locally. This requires no formatter option and uses the JSONL layout consumed by TokenUsageInsights.
+
+Default files:
+
+```text
+~/.copilot/usage/usage-YYYY-MM-DD.jsonl
+~/.copilot/copilotstatusline-usage-state.json
+```
+
+`COPILOT_HOME` changes both paths. The daily filename and entry timestamp use the local date and time-zone offset. Each entry can contain the Copilot session name, transcript path, working directory, version, model, token counters, context usage, durations, premium requests, and changed-line counts. These files remain local; recording and rendering make no network requests.
+
+Only a positive increase in cumulative total tokens creates a JSONL entry. Per-session state prevents interleaved Copilot sessions from affecting one another. Missing session IDs are not fabricated and therefore are not recorded. File or lock errors are reported on stderr without suppressing status-line output.
+
+Disable recording explicitly with:
+
+```sh
+COPILOTSTATUSLINE_DISABLE_USAGE_RECORDING=1 copilotstatusline
+```
+
+When Copilot invokes the command, set the same environment variable in its environment. Removing the integration does not delete recorded history. If TokenUsageInsights is configured with `COPILOT_DIR`, point it to the same directory as `COPILOT_HOME`.
+
 ## Installation
 
 Interactive installation:

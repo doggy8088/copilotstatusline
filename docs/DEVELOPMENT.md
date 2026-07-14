@@ -23,6 +23,8 @@ bun run example
 
 The external Copilot payload is parsed into `NormalizedCopilotStatus` before rendering. This boundary prevents payload aliases and nullable fields from spreading through widget logic.
 
+Piped mode also passes the normalized payload to the local usage recorder before rendering. The recorder keeps bounded per-session state, appends TokenUsageInsights-compatible JSONL under `COPILOT_HOME`, and treats recording failures as non-fatal so filesystem problems cannot hide the status line.
+
 Formatter settings and Copilot CLI settings are separate:
 
 - formatter settings control lines, widgets, colors, Powerline, and local command behavior;
