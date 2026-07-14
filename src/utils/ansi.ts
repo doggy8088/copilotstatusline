@@ -77,5 +77,18 @@ export function powerlineArrow(
     background: ColorName,
     colorLevel: number
 ): string {
+    if (colorLevel === 0 || value === '') {
+        return value;
+    }
+
+    if (background === 'none') {
+        const foregroundCode = foregroundCodes[foreground];
+        const codes = foregroundCode === null
+            ? [49]
+            : [foregroundCode, 49];
+
+        return `\u001B[${codes.join(';')}m${value}\u001B[0m`;
+    }
+
     return styleText(value, foreground, background, false, colorLevel);
 }

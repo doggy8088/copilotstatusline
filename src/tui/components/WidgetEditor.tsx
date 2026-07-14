@@ -20,6 +20,7 @@ import { WidgetConfigSchema } from '../../types/Settings';
 import { WIDGET_CATALOG } from '../../widgets/catalog';
 
 import { List } from './List';
+import { getEditorGlobalKeyAction } from './widget-editor-input';
 
 type PickerAction = 'add' | 'insert' | 'change';
 type EditableField = 'command' | 'prefix' | 'suffix' | 'value';
@@ -269,7 +270,14 @@ export function WidgetEditor({
             return;
         }
 
-        if (key.ctrl || key.meta) {
+        const globalKeyAction = getEditorGlobalKeyAction(key);
+
+        if (globalKeyAction === 'back') {
+            onBack();
+            return;
+        }
+
+        if (globalKeyAction === 'ignore') {
             return;
         }
 
@@ -325,8 +333,6 @@ export function WidgetEditor({
             startEditing('prefix');
         } else if (input === 's') {
             startEditing('suffix');
-        } else if (key.escape) {
-            onBack();
         }
     });
 

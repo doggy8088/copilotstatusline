@@ -80,4 +80,19 @@ describe('renderStatusLines', () => {
         expect(stripAnsi(line)).toMatch(/^ Model: GPT-5/u);
         expect(stripAnsi(line).length).toBeLessThanOrEqual(16);
     });
+
+    it('explicitly resets the background after the final Powerline segment', () => {
+        const settings = SettingsSchema.parse({
+            version: 1,
+            colorLevel: 2,
+            powerline: { enabled: true, separator: '>' },
+            lines: [[
+                { id: 'model', type: 'model' },
+                { id: 'tokens', type: 'total-tokens' }
+            ]]
+        });
+        const [line = ''] = renderStatusLines(status, settings, { terminalWidth: 120 });
+
+        expect(line).toMatch(/\u001B\[35;49m>\u001B\[0m$/u);
+    });
 });
